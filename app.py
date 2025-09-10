@@ -91,19 +91,15 @@ def verify():
 @app.route('/', methods=['POST'])
 def webhook():
     """Handles incoming messages from Facebook Messenger."""
-    data = request.get_json()
-    if data['object'] == 'page':
-        for entry in data['entry']:
-            for messaging_event in entry['messaging']:
-                if messaging_event.get('message'):
-                    sender_id = messaging_event['sender']['id']
-                    message_text = messaging_event['message'].get('text')
-                    if message_text:
-                        # Get response from RAG core
-                        response_text = get_gemini_response(message_text, knowledge_base)
-                        # Send the response back to the user
-                        bot.send_text_message(sender_id, response_text)
-    return "ok", 200
+    logger.info("Webhook received a POST request.")
+    try:
+        data = request.get_json()
+        logger.info(f"Incoming webhook data: {data}")
+        # We are just logging for now, not processing further
+        return "ok", 200
+    except Exception as e:
+        logger.error(f"Error processing webhook: {e}", exc_info=True)
+        return "error", 500
 
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 8000))
