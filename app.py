@@ -1,10 +1,15 @@
 import os
 import sys
+import logging
 from dotenv import load_dotenv
 from flask import Flask, request
 import google.generativeai as genai
 from pymessenger import Bot
 import pandas as pd
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()
