@@ -1,8 +1,0 @@
-flask
-python-dotenv
-google-generativeai
-pymessenger
-pandas
-openpyxl
-gunicorn
-
