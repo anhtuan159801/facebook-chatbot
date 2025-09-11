@@ -5,91 +5,89 @@ const app = express();
 const port = process.env.PORT || 3000;
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-const SYSTEM_PROMPT = `NGUYÊN TẮC HOẠT ĐỘNG
+const SYSTEM_PROMPT = `OPERATING PRINCIPLES
 
-## 1. Persona & Vai trò
+## 1. Persona & Role
 
-Bạn là "Trợ lý Dịch vụ công", được xây dựng bởi Anh Tuấn - Chi hội trưởng Hội Khuyến học KP69. Với các kiến thức đã được traning bạn là một nhân viên tư vấn thân thiện và am hiểu sâu sắc về các ứng dụng dịch vụ công của chính phủ Việt Nam. Triết lý của bạn là trao quyền cho công dân, giúp mọi người có thể sử dụng các tiện ích số một cách dễ dàng, tự tin và chính xác.
+You are the "Public Service Assistant," built by Anh Tuan - Head of the KP69 Study Promotion Association. With your trained knowledge, you are a friendly and deeply knowledgeable consultant on the public service applications of the Vietnamese government. Your philosophy is to empower citizens, helping everyone use digital utilities easily, confidently, and accurately.
 
-## 2. Nền tảng Kiến thức
+## 2. Knowledge Base
 
-Kiến thức của bạn tập trung sâu vào các ứng dụng và cổng thông tin phổ biến nhất, bao gồm:
-- VNeID: Định danh điện tử, tích hợp giấy tờ, khai báo di chuyển,...
-- VssID: Bảo hiểm xã hội số.
-- Cổng Dịch vụ công Quốc gia: Nộp hồ sơ, thanh toán trực tuyến,...
-- Sổ tay Đảng viên: 
-- Các ứng dụng liên quan khác khi người dùng đề cập.
+Your knowledge focuses deeply on the most popular applications and portals, including:
+- VNeID: Electronic identification, document integration, travel declarations, etc.
+- VssID: Digital Social Insurance.
+- National Public Service Portal: Submitting applications, online payments, etc.
+- Party Member's Handbook:
+- Other related applications when mentioned by the user.
 
-## 3. Quy tắc Giao tiếp & Văn phong (QUAN TRỌNG NHẤT)
+## 3. Image Analysis Capabilities
 
-### 3.1. Định dạng văn bản
-QUAN TRỌNG: Facebook Messenger KHÔNG hỗ trợ markdown. Tuyệt đối KHÔNG sử dụng:
-- Dấu ** hoặc * để in đậm/nghiêng
-- Dấu # cho tiêu đề
-- Dấu "\\\`\\\`\\\`" cho code
-- Bất kỳ ký hiệu markdown nào khác
+You can view and analyze images sent by the user, specifically to:
+- Analyze errors on application screens
+- Identify user interface issues
+- Read error messages from screenshots
+- Provide troubleshooting guidance based on the specific image
+- Identify steps in an operational process
 
-Thay vào đó:
-- Sử dụng CHỮ HOA để nhấn mạnh từ khóa quan trọng
-- Dùng dấu hai chấm (:) sau tiêu đề
-- Dùng dấu gạch ngang (-) hoặc bullet (•) cho danh sách
-- Viết văn bản thuần túy, không formatting
+## 4. Communication Rules & Tone (MOST IMPORTANT)
 
-### 3.2. Giọng văn
-- Thân thiện và Kiên nhẫn: Luôn sử dụng giọng văn gần gũi, tích cực và kiên nhẫn. Hãy coi người dùng như một người bạn đang cần giúp đỡ về công nghệ.
-- Đơn giản hóa: Tuyệt đối tránh các thuật ngữ kỹ thuật phức tạp hoặc từ ngữ hành chính khô khan. Hãy diễn giải mọi thứ bằng ngôn ngữ đời thường, dễ hiểu nhất có thể.
+### 4.1. Text Formatting
+IMPORTANT: Facebook Messenger does NOT support markdown. Absolutely DO NOT use:
+- \`**\` or \`*\` for bold/italics
+- \`#\` for headings
+- \`\\\`\\\`\\\`\` for code
+- Any other markdown symbols
 
-### 3.3. Sử dụng Biểu tượng (Emoji)
-- Tăng tính trực quan: Linh hoạt sử dụng các biểu tượng (emoji) phù hợp để làm cho hướng dẫn trở nên sinh động và dễ theo dõi.
-- Gợi ý sử dụng:
-  - 📱 cho các thao tác trên điện thoại/ứng dụng
-  - 🔍 để chỉ hành động tìm kiếm
-  - ⚙️ cho mục "Cài đặt"
-  - ➡️ để chỉ các bước nối tiếp
-  - ✅ để xác nhận hoàn thành
-  - 👋 để chào hỏi
+Instead:
+- Use ALL CAPS to emphasize important keywords
+- Use a colon (:) after headings
+- Use a hyphen (-) or bullet (•) for lists
+- Write in plain text, with no formatting
 
-### 3.4. Cấu trúc Câu trả lời
-- Chào hỏi: Luôn bắt đầu bằng một lời chào thân thiện
-- Hướng dẫn theo từng bước: Luôn chia nhỏ các quy trình phức tạp thành các bước đơn giản, được đánh số rõ ràng (Bước 1, Bước 2,...). Mỗi bước chỉ nên chứa một hành động chính.
-- Xác nhận và Khích lệ: Kết thúc câu trả lời bằng một lời chúc thành công hoặc một câu khích lệ
-- Đảm bảo câu trả lời HOÀN CHỈNH: Luôn hoàn thành tất cả các bước cần thiết, không được dừng giữa chừng
+### 4.2. Tone of Voice
+- Friendly and Patient: Always use a friendly, positive, and patient tone. Treat the user like a friend who needs help with technology.
+- Simplify: Absolutely avoid complex technical terms or dry administrative jargon. Explain everything in everyday language that is as easy to understand as possible.
 
-## 4. Ví dụ Mẫu (Để tham khảo)
+### 4.3. Use of Emojis
+- Enhance Visuals: Flexibly use appropriate emojis to make instructions more lively and easier to follow.
+- Suggested Use:
+  - 📱 for actions on a phone/app
+  - 🔍 to indicate a search action
+  - ⚙️ for the "Settings" section
+  - ➡️ to indicate sequential steps
+  - ✅ to confirm completion
+  - 👋 for greetings
+  - 📷 for responding to images
+  - 🔧 to indicate error fixing
 
-Câu hỏi của người dùng: "Làm sao để tích hợp bằng lái xe vào VNeID?"
+### 4.4. Answer Structure for Image Responses
+- Acknowledge receipt of the image: "I have seen the image you sent..."
+- Analyze the specific error from the image
+- Provide step-by-step troubleshooting instructions
+- End with a confirmation and encouragement
+- The response must be concise but complete (around 300 words)
+- Whatever language the user uses, you must use the same language to respond.
 
-KẾT QUẢ MẪU (Chính xác 100%):
+## 5. Sample Example for Image Handling
 
-Chào bạn 👋, để tích hợp Bằng lái xe (GPLX) vào VNeID, bạn chỉ cần làm theo các bước đơn giản sau đây nhé:
+When the user sends an error image:
 
-📱 BƯỚC 1: Mở ứng dụng VNeID và Đăng nhập
-- Mở ứng dụng VNeID trên điện thoại của bạn
-- Đăng nhập vào tài khoản định danh điện tử mức 2 của bạn
+📷 I have seen the image you sent! I see that you are encountering [DESCRIBE THE SPECIFIC ERROR] while using the [APPLICATION NAME] app.
 
-📁 BƯỚC 2: Truy cập Ví giấy tờ
-- Tại màn hình chính, bạn chọn mục "Ví giấy tờ"
+🔧 HOW TO FIX:
 
-➕ BƯỚC 3: Bắt đầu Tích hợp thông tin
-- Chọn "Tích hợp thông tin"
-- Nhấn vào "Tạo mới yêu cầu"
+STEP 1: [Specific instruction]
+STEP 2: [Specific instruction]
+...
 
-🚗 BƯỚC 4: Chọn và Nhập thông tin GPLX
-- Tại ô "Loại thông tin", bạn chọn "Giấy phép lái xe"
-- Nhập chính xác "Số giấy phép lái xe" và "Hạng giấy phép lái xe" của bạn
-- Tích vào ô "Tôi xác nhận các thông tin trên là đúng" rồi nhấn "Gửi yêu cầu"
+✅ After completing these steps, this error should be resolved. If you still face issues, please take a new screenshot so I can assist you further!
 
-✨ HOÀN TẤT! Hệ thống sẽ mất một khoảng thời gian để xét duyệt. Sau khi được duyệt thành công, bằng lái xe của bạn sẽ hiển thị trong mục "Ví giấy tờ". Chúc bạn thực hiện thành công nhé! ✅
-
-## 5. Lưu ý quan trọng
-- Luôn cung cấp câu trả lời ĐẦY ĐỦ và HOÀN CHỈNH
-- Không được dừng giữa chừng hoặc cắt cụt thông tin
-- Sử dụng ngôn ngữ đơn giản, không có markdown formatting
-- Đảm bảo tất cả các bước được trình bày rõ ràng từ đầu đến cuối
-- Nội dung câu trả lời tốt chỉ nên nằm trong khoảng 250 từ.
+## 6. Important Notes
+- Always analyze the image carefully before providing instructions
+- Ensure you correctly understand the error from the image before advising
+- Provide specific guidance based on the actual interface shown in the image
+- The response content should be around 250-300 words when an image is involved.
 `;
-
-
 // Access your API key as an environment variable (see ".env" file)
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
@@ -160,8 +158,8 @@ app.post('/webhook', async (req, res) => {
                     // Tạo unique key cho mỗi request
                     const requestKey = `${sender_psid}_${Date.now()}`;
                     
-                    // Xử lý message nếu có
-                    if (webhook_event.message && webhook_event.message.text) {
+                    // Xử lý message nếu có (text hoặc attachments)
+                    if (webhook_event.message) {
                         return handleMessage(sender_psid, webhook_event.message, requestKey);
                     }
                     return Promise.resolve();
@@ -177,6 +175,29 @@ app.post('/webhook', async (req, res) => {
         res.sendStatus(404);
     }
 });
+
+// Function to download image from Facebook
+async function downloadImage(imageUrl, accessToken) {
+    try {
+        const fetch = await import('node-fetch');
+        const response = await fetch.default(`${imageUrl}?access_token=${accessToken}`);
+        
+        if (!response.ok) {
+            throw new Error(`Failed to download image: ${response.status} ${response.statusText}`);
+        }
+        
+        const buffer = await response.buffer();
+        return buffer;
+    } catch (error) {
+        console.error('Error downloading image:', error);
+        throw error;
+    }
+}
+
+// Function to convert image buffer to base64
+function bufferToBase64(buffer, mimeType = 'image/jpeg') {
+    return `data:${mimeType};base64,${buffer.toString('base64')}`;
+}
 
 // Fetches the last 10 messages for a user
 async function getConversationHistory(userId) {
@@ -289,9 +310,113 @@ async function processMessage(sender_psid, received_message, requestKey) {
     let response;
 
     try {
-        // Checks if the message contains text
+        // Xử lý tin nhắn có hình ảnh
+        if (received_message.attachments && received_message.attachments.length > 0) {
+            const imageAttachments = received_message.attachments.filter(
+                attachment => attachment.type === 'image'
+            );
+
+            if (imageAttachments.length > 0) {
+                console.log(`Processing ${imageAttachments.length} image(s) from ${sender_psid}`);
+                
+                // Lấy lịch sử cuộc trò chuyện
+                const history = await getConversationHistory(sender_psid);
+                
+                // Ensure history starts with 'user' if not empty
+                if (history.length > 0 && history[0].role === 'model') {
+                    history.shift();
+                }
+
+                // Tạo model với khả năng xử lý hình ảnh
+                const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+                
+                // Xử lý từng hình ảnh
+                for (const imageAttachment of imageAttachments) {
+                    try {
+                        const imageUrl = imageAttachment.payload.url;
+                        console.log(`Downloading image from: ${imageUrl}`);
+                        
+                        // Download hình ảnh
+                        const imageBuffer = await downloadImage(imageUrl, process.env.PAGE_ACCESS_TOKEN);
+                        const base64Image = bufferToBase64(imageBuffer);
+                        
+                        // Tạo chat với history
+                        const chat = model.startChat({
+                            history: history,
+                            generationConfig: {
+                                maxOutputTokens: 5000,
+                                temperature: 0.7,
+                            },
+                            systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+                        });
+
+                        // Tạo message với hình ảnh và text (nếu có)
+                        const messageParts = [
+                            {
+                                inlineData: {
+                                    data: base64Image.split(',')[1], // Remove data:image/jpeg;base64, prefix
+                                    mimeType: 'image/jpeg'
+                                }
+                            }
+                        ];
+
+                        // Thêm text nếu có
+                        const messageText = received_message.text ? 
+                            received_message.text.trim() : 
+                            "Hãy phân tích hình ảnh này và giúp tôi khắc phục lỗi nếu có.";
+                        
+                        messageParts.push({ text: messageText });
+
+                        console.log(`Sending image analysis request to Gemini for ${sender_psid}...`);
+                        
+                        // Gửi message với hình ảnh đến Gemini
+                        const result = await Promise.race([
+                            chat.sendMessage(messageParts),
+                            new Promise((_, reject) => 
+                                setTimeout(() => reject(new Error('Gemini API timeout')), 45000)
+                            )
+                        ]);
+                        
+                        const text = result.response.text();
+                        console.log(`Received image analysis from Gemini for ${sender_psid}, length: ${text.length}`);
+
+                        // Chia nhỏ response nếu quá dài
+                        if (text.length > 2000) {
+                            const chunks = splitMessage(text, 2000);
+                            for (let i = 0; i < chunks.length; i++) {
+                                response = { "text": chunks[i] };
+                                const success = await callSendAPI(sender_psid, response);
+                                if (!success) {
+                                    console.error(`Failed to send chunk ${i + 1}/${chunks.length} to ${sender_psid}`);
+                                }
+                                if (i < chunks.length - 1) {
+                                    await new Promise(resolve => setTimeout(resolve, 500));
+                                }
+                            }
+                        } else {
+                            response = { "text": text };
+                            await callSendAPI(sender_psid, response);
+                        }
+
+                        // Lưu cuộc trò chuyện
+                        await saveConversation(sender_psid, "[Đã gửi hình ảnh] " + messageText, text);
+                        console.log(`Successfully processed image for ${sender_psid}`);
+
+                    } catch (imageError) {
+                        console.error(`Error processing image for ${sender_psid}:`, imageError);
+                        const errorResponse = {
+                            "text": "Xin lỗi, tôi không thể xử lý hình ảnh này. Có thể do hình ảnh quá lớn hoặc định dạng không hỗ trợ. Bạn thử gửi lại hình ảnh khác hoặc mô tả vấn đề bằng văn bản nhé! 📷"
+                        };
+                        await callSendAPI(sender_psid, errorResponse);
+                    }
+                }
+                return; // Kết thúc xử lý hình ảnh
+            }
+        }
+
+        // Xử lý tin nhắn văn bản thông thường
         if (received_message.text && received_message.text.trim()) {
-            console.log(`Processing message from ${sender_psid}: "${received_message.text}"`);
+            console.log(`Processing text message from ${sender_psid}: "${received_message.text}"`);
             
             // Lấy lịch sử cuộc trò chuyện
             const history = await getConversationHistory(sender_psid);
@@ -308,7 +433,7 @@ async function processMessage(sender_psid, received_message, requestKey) {
             const chat = model.startChat({
                 history: history,
                 generationConfig: {
-                    maxOutputTokens: 1000,
+                    maxOutputTokens: 5000,
                     temperature: 0.7,
                 },
                 systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
@@ -328,7 +453,7 @@ async function processMessage(sender_psid, received_message, requestKey) {
             const text = result.response.text();
             console.log(`Received response from Gemini for ${sender_psid}, length: ${text.length}`);
 
-            // Chia nhỏ response nếu quá dài (Facebook có giới hạn 2000 ký tự)
+            // Chia nhỏ response nếu quá dài
             if (text.length > 2000) {
                 const chunks = splitMessage(text, 2000);
                 for (let i = 0; i < chunks.length; i++) {
@@ -337,7 +462,6 @@ async function processMessage(sender_psid, received_message, requestKey) {
                     if (!success) {
                         console.error(`Failed to send chunk ${i + 1}/${chunks.length} to ${sender_psid}`);
                     }
-                    // Đợi một chút giữa các chunk để tránh spam
                     if (i < chunks.length - 1) {
                         await new Promise(resolve => setTimeout(resolve, 500));
                     }
@@ -351,10 +475,11 @@ async function processMessage(sender_psid, received_message, requestKey) {
             await saveConversation(sender_psid, msg, text);
             console.log(`Successfully processed message for ${sender_psid}`);
 
-        } else {
-            console.log(`Received non-text message from ${sender_psid}`);
+        } else if (!received_message.attachments || received_message.attachments.length === 0) {
+            // Không có text và không có attachments
+            console.log(`Received empty message from ${sender_psid}`);
             response = {
-                "text": "Xin lỗi, tôi chỉ có thể xử lý tin nhắn văn bản. Bạn có thể gửi câu hỏi bằng chữ để tôi hỗ trợ bạn nhé! 😊"
+                "text": "Xin chào! 👋 Tôi có thể giúp bạn giải quyết các vấn đề về dịch vụ công trực tuyến. Bạn có thể:\n\n📝 Gửi câu hỏi bằng văn bản\n📷 Chụp ảnh màn hình lỗi để tôi hỗ trợ cụ thể hơn\n\nBạn cần hỗ trợ gì nhé? 😊"
             };
             await callSendAPI(sender_psid, response);
         }
@@ -428,7 +553,8 @@ app.get('/health', (req, res) => {
     res.status(200).json({ 
         status: 'OK', 
         timestamp: new Date().toISOString(),
-        activeRequests: processingRequests.size
+        activeRequests: processingRequests.size,
+        features: ['text_processing', 'image_analysis', 'error_detection']
     });
 });
 
@@ -452,4 +578,5 @@ process.on('SIGTERM', async () => {
 app.listen(port, () => {
     console.log(`Chatbot server is running on port ${port}`);
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log('Features: Text processing + Image analysis for error detection');
 });
