@@ -88,6 +88,7 @@ STEP 2: [Specific instruction]
 - Provide specific guidance based on the actual interface shown in the image
 - The response content should be around 250-300 words when an image is involved.
 `;
+
 // Access your API key as an environment variable (see ".env" file)
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
@@ -344,7 +345,7 @@ async function processMessage(sender_psid, received_message, requestKey) {
                         const chat = model.startChat({
                             history: history,
                             generationConfig: {
-                                maxOutputTokens: 5000,
+                                maxOutputTokens: 1000,
                                 temperature: 0.7,
                             },
                             systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
@@ -433,7 +434,7 @@ async function processMessage(sender_psid, received_message, requestKey) {
             const chat = model.startChat({
                 history: history,
                 generationConfig: {
-                    maxOutputTokens: 5000,
+                    maxOutputTokens: 1000,
                     temperature: 0.7,
                 },
                 systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
@@ -577,6 +578,9 @@ process.on('SIGTERM', async () => {
 
 app.listen(port, () => {
     console.log(`Chatbot server is running on port ${port}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log('Features: Text processing + Image analysis for error detection');
+});
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log('Features: Text processing + Image analysis for error detection');
 });
