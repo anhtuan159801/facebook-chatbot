@@ -307,7 +307,7 @@ async function processMessage(sender_psid, received_message, requestKey) {
             const chat = model.startChat({
                 history: history,
                 generationConfig: {
-                    maxOutputTokens: 1000,
+                    maxOutputTokens: 5000,
                     temperature: 0.7,
                 },
                 systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
