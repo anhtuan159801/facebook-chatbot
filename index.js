@@ -127,7 +127,6 @@ STEP 2: [Specific instruction]
 - The response content should be around 250-300 words when an image is involved.
 `;
 
-
 // Access your API key as an environment variable (see ".env" file)
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
@@ -177,43 +176,180 @@ app.get('/webhook', (req, res) => {
     console.log('--- End Webhook Verification Request ---');
 });
 
-// Handle incoming messages
+// Sends response messages via the Send API với retry mechanism
+async function callSendAPI(sender_psid, response, maxRetries = 3) {
+    const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN;
+    const request_body = {
+        "recipient": {
+            "id": sender_psid
+        },
+        "message": response
+    };
+
+    console.log('📤 Sending message to Facebook API...');
+    console.log('Recipient PSID:', sender_psid);
+    console.log('Request body:', JSON.stringify(request_body, null, 2));
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            console.log(`Sending message to ${sender_psid} (attempt ${attempt}/${maxRetries})`);
+            
+            const fetch = await import('node-fetch');
+            const apiResponse = await fetch.default(`https://graph.facebook.com/v2.6/me/messages?access_token=${PAGE_ACCESS_TOKEN}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(request_body)
+            });
+
+            const responseData = await apiResponse.json();
+            console.log('Facebook API response:', responseData);
+            
+            if (apiResponse.ok) {
+                console.log(`✅ Message sent successfully to ${sender_psid}!`);
+                return true;
+            } else {
+                console.error(`❌ Facebook API error for ${sender_psid}:`, responseData);
+                if (attempt === maxRetries) {
+                    throw new Error(`Failed to send message after ${maxRetries} attempts: ${JSON.stringify(responseData)}`);
+                }
+            }
+        } catch (error) {
+            console.error(`❌ Attempt ${attempt} failed for ${sender_psid}:`, error.message);
+            if (attempt === maxRetries) {
+                console.error(`Unable to send message to ${sender_psid} after ${maxRetries} attempts:`, error);
+                return false;
+            }
+            // Đợi một chút trước khi retry
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        }
+    }
+    return false;
+}
+
+// SIMPLE WEBHOOK FOR TESTING (ADD THIS FIRST)
+app.post('/webhook-simple', async (req, res) => {
+    console.log('=== SIMPLE WEBHOOK TEST ===');
+    console.log('Time:', new Date().toISOString());
+    console.log('Body:', JSON.stringify(req.body, null, 2));
+    
+    res.status(200).send('EVENT_RECEIVED');
+    
+    // Test gửi message ngay lập tức
+    if (req.body.object === 'page') {
+        for (const entry of req.body.entry) {
+            if (entry.messaging) {
+                for (const event of entry.messaging) {
+                    if (event.message && event.message.text) {
+                        const sender_psid = event.sender.id;
+                        console.log('🚀 Sending quick reply to:', sender_psid);
+                        
+                        // Gửi message test ngay
+                        const testResponse = {
+                            "text": `✅ Bot hoạt động! Nhận được: "${event.message.text}" lúc ${new Date().toLocaleTimeString('vi-VN')}`
+                        };
+                        
+                        try {
+                            const success = await callSendAPI(sender_psid, testResponse);
+                            console.log('✅ Quick reply result:', success);
+                        } catch (error) {
+                            console.error('❌ Quick reply error:', error);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    console.log('=== END SIMPLE TEST ===');
+});
+
+// Handle incoming messages with enhanced debugging
 app.post('/webhook', async (req, res) => {
     let body = req.body;
 
+    console.log('====================================');
+    console.log('🔔 FULL WEBHOOK REQUEST RECEIVED');
+    console.log('Time:', new Date().toISOString());
+    console.log('Headers:', JSON.stringify(req.headers, null, 2));
+    console.log('Body:', JSON.stringify(body, null, 2));
+    console.log('====================================');
+
     if (body.object === 'page') {
-        // Trả về response ngay lập tức để tránh timeout
+        // Trả về response ngay để tránh timeout
         res.status(200).send('EVENT_RECEIVED');
+        console.log('✅ Sent EVENT_RECEIVED response to Facebook');
 
-        // Xử lý từng entry một cách bất đồng bộ
-        for (const entry of body.entry) {
+        // Kiểm tra structure
+        console.log('📊 Body structure check:');
+        console.log('- body.object:', body.object);
+        console.log('- body.entry exists:', !!body.entry);
+        console.log('- body.entry length:', body.entry?.length || 0);
+
+        for (let i = 0; i < body.entry.length; i++) {
+            const entry = body.entry[i];
+            console.log(`\n📝 Processing entry ${i + 1}:`, JSON.stringify(entry, null, 2));
+            
+            // Kiểm tra entry structure
+            console.log('Entry analysis:');
+            console.log('- entry.id:', entry.id);
+            console.log('- entry.time:', entry.time);
+            console.log('- entry.messaging exists:', !!entry.messaging);
+            console.log('- entry.messaging length:', entry.messaging?.length || 0);
+
             if (entry.messaging && entry.messaging.length > 0) {
-                // Xử lý từng message một cách song song
-                const messagePromises = entry.messaging.map(webhook_event => {
-                    console.log('Received webhook event:', JSON.stringify(webhook_event, null, 2));
+                console.log('✅ Found messaging events!');
+                
+                for (let j = 0; j < entry.messaging.length; j++) {
+                    const webhook_event = entry.messaging[j];
+                    console.log(`\n📬 Message event ${j + 1}:`, JSON.stringify(webhook_event, null, 2));
                     
-                    let sender_psid = webhook_event.sender.id;
-                    console.log('Sender PSID: ' + sender_psid);
+                    // Chi tiết từng field
+                    console.log('Event analysis:');
+                    console.log('- sender.id:', webhook_event.sender?.id);
+                    console.log('- recipient.id:', webhook_event.recipient?.id);
+                    console.log('- timestamp:', webhook_event.timestamp);
+                    console.log('- has message:', !!webhook_event.message);
+                    console.log('- message.text:', webhook_event.message?.text);
+                    console.log('- message.mid:', webhook_event.message?.mid);
 
-                    // Tạo unique key cho mỗi request
+                    let sender_psid = webhook_event.sender.id;
+                    console.log('🔄 Processing message for PSID:', sender_psid);
+
                     const requestKey = `${sender_psid}_${Date.now()}`;
                     
-                    // Xử lý message nếu có
                     if (webhook_event.message && webhook_event.message.text) {
-                        return handleMessage(sender_psid, webhook_event.message, requestKey);
+                        console.log('📤 Valid text message found, processing...');
+                        console.log('Message content:', webhook_event.message.text);
+                        
+                        try {
+                            await handleMessage(sender_psid, webhook_event.message, requestKey);
+                            console.log('✅ Message processed successfully');
+                        } catch (error) {
+                            console.error('❌ Error processing message:', error);
+                        }
+                    } else {
+                        console.log('⚠️ Skipping - no text message found');
+                        console.log('Message object:', webhook_event.message);
                     }
-                    return Promise.resolve();
-                });
-
-                // Đợi tất cả messages được xử lý
-                await Promise.allSettled(messagePromises);
+                }
             } else {
-                console.log('No messaging events found in this entry.');
+                console.log('❌ No messaging events found in this entry');
+                console.log('Available entry keys:', Object.keys(entry));
+                
+                // Kiểm tra các loại event khác
+                if (entry.changes) {
+                    console.log('Found changes:', entry.changes);
+                }
+                if (entry.standby) {
+                    console.log('Found standby:', entry.standby);
+                }
             }
         }
     } else {
+        console.log('❌ Not a page object. Received:', body.object);
         res.sendStatus(404);
     }
+    
+    console.log('🏁 Webhook processing completed\n');
 });
 
 // Fetches the last 10 messages for a user
@@ -257,51 +393,6 @@ async function saveConversation(userId, userMessage, botResponse) {
     }
 }
 
-// Sends response messages via the Send API với retry mechanism
-async function callSendAPI(sender_psid, response, maxRetries = 3) {
-    const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN;
-    const request_body = {
-        "recipient": {
-            "id": sender_psid
-        },
-        "message": response
-    };
-
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-            console.log(`Sending message to ${sender_psid} (attempt ${attempt}/${maxRetries})`);
-            
-            const fetch = await import('node-fetch');
-            const apiResponse = await fetch.default(`https://graph.facebook.com/v2.6/me/messages?access_token=${PAGE_ACCESS_TOKEN}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(request_body)
-            });
-
-            const responseData = await apiResponse.json();
-            
-            if (apiResponse.ok) {
-                console.log(`Message sent successfully to ${sender_psid}!`);
-                return true;
-            } else {
-                console.error(`Facebook API error for ${sender_psid}:`, responseData);
-                if (attempt === maxRetries) {
-                    throw new Error(`Failed to send message after ${maxRetries} attempts`);
-                }
-            }
-        } catch (error) {
-            console.error(`Attempt ${attempt} failed for ${sender_psid}:`, error.message);
-            if (attempt === maxRetries) {
-                console.error(`Unable to send message to ${sender_psid} after ${maxRetries} attempts:`, error);
-                return false;
-            }
-            // Đợi một chút trước khi retry
-            await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
-        }
-    }
-    return false;
-}
-
 // Handles messages events với improved error handling và concurrency control
 async function handleMessage(sender_psid, received_message, requestKey) {
     // Kiểm tra xem user này có đang được xử lý không
@@ -324,12 +415,27 @@ async function handleMessage(sender_psid, received_message, requestKey) {
 }
 
 async function processMessage(sender_psid, received_message, requestKey) {
+    console.log('=== PROCESS MESSAGE START ===');
+    console.log('Sender PSID:', sender_psid);
+    console.log('Message text:', received_message.text);
+    console.log('Request key:', requestKey);
+    
     let response;
 
     try {
         // Checks if the message contains text
         if (received_message.text && received_message.text.trim()) {
+            console.log('✅ Valid text message received');
             console.log(`Processing message from ${sender_psid}: "${received_message.text}"`);
+            
+            // Test database connection
+            console.log('🗄️ Testing database connection...');
+            try {
+                const testQuery = await pool.query('SELECT NOW()');
+                console.log('✅ Database connection OK:', testQuery.rows[0]);
+            } catch (dbError) {
+                console.error('❌ Database connection failed:', dbError);
+            }
             
             // Lấy lịch sử cuộc trò chuyện
             const history = await getConversationHistory(sender_psid);
@@ -341,55 +447,72 @@ async function processMessage(sender_psid, received_message, requestKey) {
                 console.log(`Adjusted history to start with user message for ${sender_psid}`);
             }
 
-            // Tạo model và chat instance
-            const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
-            const chat = model.startChat({
-                history: history,
-                generationConfig: {
-                    maxOutputTokens: 5000,
-                    temperature: 0.7,
-                },
-                systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-            });
+            // Test Gemini API
+            console.log('🤖 Testing Gemini API...');
+            try {
+                const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+                console.log('✅ Gemini model created successfully');
+                
+                const chat = model.startChat({
+                    history: history,
+                    generationConfig: {
+                        maxOutputTokens: 5000,
+                        temperature: 0.7,
+                    },
+                    systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+                });
 
-            const msg = received_message.text.trim();
-            console.log(`Sending message to Gemini for ${sender_psid}...`);
-            
-            // Gửi message đến Gemini với timeout
-            const result = await Promise.race([
-                chat.sendMessage(msg),
-                new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error('Gemini API timeout')), 30000)
-                )
-            ]);
-            
-            const text = result.response.text();
-            console.log(`Received response from Gemini for ${sender_psid}, length: ${text.length}`);
+                const msg = received_message.text.trim();
+                console.log(`Sending message to Gemini for ${sender_psid}...`);
+                
+                // Gửi message đến Gemini với timeout
+                const result = await Promise.race([
+                    chat.sendMessage(msg),
+                    new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error('Gemini API timeout')), 30000)
+                    )
+                ]);
+                
+                const text = result.response.text();
+                console.log(`✅ Received response from Gemini for ${sender_psid}, length: ${text.length}`);
+                console.log('Response preview:', text.substring(0, 200) + '...');
 
-            // Chia nhỏ response nếu quá dài (Facebook có giới hạn 2000 ký tự)
-            if (text.length > 2000) {
-                const chunks = splitMessage(text, 2000);
-                for (let i = 0; i < chunks.length; i++) {
-                    response = { "text": chunks[i] };
-                    const success = await callSendAPI(sender_psid, response);
-                    if (!success) {
-                        console.error(`Failed to send chunk ${i + 1}/${chunks.length} to ${sender_psid}`);
+                // Chia nhỏ response nếu quá dài (Facebook có giới hạn 2000 ký tự)
+                if (text.length > 2000) {
+                    console.log(`Message too long (${text.length} chars), splitting...`);
+                    const chunks = splitMessage(text, 2000);
+                    console.log(`Split into ${chunks.length} chunks`);
+                    
+                    for (let i = 0; i < chunks.length; i++) {
+                        response = { "text": chunks[i] };
+                        console.log(`Sending chunk ${i + 1}/${chunks.length}...`);
+                        const success = await callSendAPI(sender_psid, response);
+                        if (!success) {
+                            console.error(`Failed to send chunk ${i + 1}/${chunks.length} to ${sender_psid}`);
+                        }
+                        // Đợi một chút giữa các chunk để tránh spam
+                        if (i < chunks.length - 1) {
+                            await new Promise(resolve => setTimeout(resolve, 500));
+                        }
                     }
-                    // Đợi một chút giữa các chunk để tránh spam
-                    if (i < chunks.length - 1) {
-                        await new Promise(resolve => setTimeout(resolve, 500));
-                    }
+                } else {
+                    response = { "text": text };
+                    console.log('Sending single message...');
+                    await callSendAPI(sender_psid, response);
                 }
-            } else {
-                response = { "text": text };
-                await callSendAPI(sender_psid, response);
+
+                // Lưu cuộc trò chuyện vào database
+                console.log('💾 Saving conversation to database...');
+                await saveConversation(sender_psid, msg, text);
+                console.log(`✅ Successfully processed message for ${sender_psid}`);
+
+            } catch (geminiError) {
+                console.error('❌ Gemini API error:', geminiError);
+                throw geminiError;
             }
 
-            // Lưu cuộc trò chuyện vào database
-            await saveConversation(sender_psid, msg, text);
-            console.log(`Successfully processed message for ${sender_psid}`);
-
         } else {
+            console.log('❌ Invalid message - no text content');
             console.log(`Received non-text message from ${sender_psid}`);
             response = {
                 "text": "Xin lỗi, tôi chỉ có thể xử lý tin nhắn văn bản. Bạn có thể gửi câu hỏi bằng chữ để tôi hỗ trợ bạn nhé! 😊"
@@ -398,7 +521,8 @@ async function processMessage(sender_psid, received_message, requestKey) {
         }
 
     } catch (error) {
-        console.error(`Error processing message for ${sender_psid}:`, error);
+        console.error(`❌ ERROR in processMessage for ${sender_psid}:`, error);
+        console.error('Error stack:', error.stack);
         
         // Gửi error message cho user
         const errorResponse = {
@@ -411,6 +535,8 @@ async function processMessage(sender_psid, received_message, requestKey) {
             console.error(`Failed to send error message to ${sender_psid}:`, sendError);
         }
     }
+    
+    console.log('=== PROCESS MESSAGE END ===\n');
 }
 
 // Helper function để chia nhỏ message dài
@@ -461,12 +587,106 @@ function splitMessage(text, maxLength) {
     return chunks;
 }
 
+// Test endpoints for debugging
+app.get('/test', (req, res) => {
+    console.log('🧪 Test endpoint called at:', new Date().toISOString());
+    res.json({ 
+        status: 'Server is working!', 
+        timestamp: new Date().toISOString(),
+        url: req.originalUrl,
+        env: {
+            port: process.env.PORT || 3000,
+            nodeEnv: process.env.NODE_ENV || 'development',
+            hasVerifyToken: !!process.env.VERIFY_TOKEN,
+            hasPageToken: !!process.env.PAGE_ACCESS_TOKEN,
+            hasGeminiKey: !!process.env.GEMINI_API_KEY,
+            hasDbConfig: !!process.env.DB_HOST
+        }
+    });
+});
+
+// Test webhook manually
+app.post('/test-webhook', (req, res) => {
+    console.log('🧪 Manual webhook test called');
+    console.log('Headers:', req.headers);
+    console.log('Body:', JSON.stringify(req.body, null, 2));
+    res.json({ received: true, body: req.body, timestamp: new Date().toISOString() });
+});
+
+// Test message processing
+app.post('/test-message', async (req, res) => {
+    const { psid, message } = req.body;
+    
+    console.log('🧪 Manual test message triggered');
+    console.log('PSID:', psid);
+    console.log('Message:', message);
+    
+    if (!psid || !message) {
+        return res.status(400).json({ error: 'Missing psid or message' });
+    }
+    
+    try {
+        const fakeMessage = { text: message };
+        await handleMessage(psid, fakeMessage, `test_${Date.now()}`);
+        res.json({ success: true, message: 'Test message processed', timestamp: new Date().toISOString() });
+    } catch (error) {
+        console.error('❌ Test message error:', error);
+        res.status(500).json({ error: error.message, timestamp: new Date().toISOString() });
+    }
+});
+
+// Endpoint để test gửi message trực tiếp
+app.post('/send-test-message', async (req, res) => {
+    const { psid, message } = req.body;
+    
+    if (!psid || !message) {
+        return res.status(400).json({ error: 'Missing psid or message' });
+    }
+    
+    try {
+        const response = { "text": message };
+        const result = await callSendAPI(psid, response);
+        res.json({ 
+            success: result, 
+            message: result ? 'Message sent!' : 'Message failed',
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('❌ Test send error:', error);
+        res.status(500).json({ error: error.message, timestamp: new Date().toISOString() });
+    }
+});
+
+// Endpoint để switch webhook mode
+app.get('/switch-webhook/:mode', (req, res) => {
+    const mode = req.params.mode;
+    console.log('🔄 Webhook switch request to mode:', mode);
+    
+    res.json({
+        message: `Webhook mode information: ${mode}`,
+        instructions: {
+            simple: {
+                url: 'https://facebook-chatbot-a1t6.onrender.com/webhook-simple',
+                description: 'Quick response test - bypasses AI processing'
+            },
+            full: {
+                url: 'https://facebook-chatbot-a1t6.onrender.com/webhook',
+                description: 'Full processing with AI and database'
+            },
+            facebook_setup: 'Update webhook URL in Facebook Developer Console → Products → Messenger → Settings → Webhooks'
+        },
+        current_time: new Date().toISOString()
+    });
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
     res.status(200).json({ 
         status: 'OK', 
         timestamp: new Date().toISOString(),
-        activeRequests: processingRequests.size
+        activeRequests: processingRequests.size,
+        uptime: process.uptime(),
+        memory: process.memoryUsage()
     });
 });
 
@@ -488,6 +708,18 @@ process.on('SIGTERM', async () => {
 });
 
 app.listen(port, () => {
-    console.log(`Chatbot server is running on port ${port}`);
-    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🚀 Chatbot server is running on port ${port}`);
+    console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log('🔧 Available endpoints:');
+    console.log('   ✅ GET  /webhook - Facebook verification');
+    console.log('   🤖 POST /webhook - Full AI processing');
+    console.log('   ⚡ POST /webhook-simple - Quick test mode');
+    console.log('   🧪 GET  /test - Server status');
+    console.log('   📨 POST /test-webhook - Manual webhook test');
+    console.log('   💬 POST /test-message - Test message processing');
+    console.log('   📤 POST /send-test-message - Test Facebook send');
+    console.log('   🔄 GET  /switch-webhook/:mode - Webhook mode info');
+    console.log('   ❤️  GET  /health - Health check');
+    console.log('🎯 Enhanced webhook debug logging enabled');
+    console.log('📍 Simple webhook available at: /webhook-simple');
 });
