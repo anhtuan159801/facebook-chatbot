@@ -1,17 +1,16 @@
-# 🤖 Facebook Chatbot với RAG System
+# 🤖 Facebook Chatbot tích hợp Google Gemini
 
 ## 🎯 Tổng Quan
 
-Chatbot hỗ trợ dịch vụ công Việt Nam được nâng cấp với **RAG (Retrieval-Augmented Generation)**, giúp cung cấp câu trả lời chính xác dựa trên tài liệu kiến thức thực tế.
+Chatbot Messenger được xây dựng với Node.js, tích hợp trực tiếp với mô hình ngôn ngữ Google Gemini để mang lại trải nghiệm trò chuyện thông minh và tự nhiên. Chatbot có khả năng ghi nhớ lịch sử hội thoại để cuộc trò chuyện liền mạch hơn.
 
 ### ✨ Tính Năng Chính
 
-- 🧠 **AI-Powered**: Sử dụng Google Gemini 2.0 Flash
-- 📚 **RAG System**: Tích hợp kiến thức từ tài liệu DOCX
-- 🔍 **Intelligent Search**: Tìm kiếm context thông minh  
-- 💬 **Facebook Integration**: Tích hợp hoàn toàn với Messenger
-- 🗃️ **Database Storage**: Lưu trữ lịch sử hội thoại
-- 📱 **Mobile Friendly**: Tối ưu cho giao diện mobile
+- 🧠 **Tích hợp Google Gemini**: Sử dụng mô hình `gemini-2.0-flash-exp` để xử lý và trả lời tin nhắn.
+- 💬 **Tích hợp Facebook Messenger**: Hoạt động hoàn toàn trên nền tảng Facebook Messenger.
+- 🗃️ **Lưu trữ Lịch sử Hội thoại**: Sử dụng PostgreSQL để lưu lại các cuộc trò chuyện, giúp AI có ngữ cảnh tốt hơn.
+- 🚀 **API Endpoints**: Cung cấp các endpoint để kiểm tra trạng thái và gỡ lỗi.
+- 🔧 **Dễ dàng Cấu hình**: Quản lý cấu hình qua file `.env`.
 
 ## 🛠️ Setup và Cài Đặt
 
@@ -19,25 +18,23 @@ Chatbot hỗ trợ dịch vụ công Việt Nam được nâng cấp với **RAG
 
 - Node.js >= 18.0.0
 - PostgreSQL Database
-- Facebook Page và App
+- Facebook Page và Facebook App
 - Google Gemini API Key
-- Tài liệu data.docx
 
 ### 2. Clone và Cài Đặt
 
 ```bash
-# Clone repository  
-git clone https://github.com/anhtuan159801/facebook-chatbot-rag.git
-cd facebook-chatbot-rag
+# Clone repository
+git clone https://github.com/anhtuan159801/facebook-chatbot.git
+cd facebook-chatbot
 
 # Cài đặt dependencies
 npm install
-
-# Tạo file environment
-cp .env.example .env
 ```
 
 ### 3. Cấu Hình Environment
+
+Tạo một file tên là `.env` ở thư mục gốc và điền các thông tin sau:
 
 ```env
 # Facebook Messenger Configuration
@@ -47,7 +44,7 @@ VERIFY_TOKEN=your_custom_verify_token
 # Google Gemini AI
 GEMINI_API_KEY=your_gemini_api_key
 
-# Database Configuration  
+# Database Configuration
 DB_HOST=your_postgresql_host
 DB_PORT=5432
 DB_USER=your_db_username
@@ -60,6 +57,8 @@ NODE_ENV=production
 ```
 
 ### 4. Chuẩn Bị Database
+
+Kết nối vào database PostgreSQL của bạn và chạy câu lệnh SQL sau để tạo bảng cần thiết:
 
 ```sql
 -- Tạo bảng conversations
@@ -76,291 +75,82 @@ CREATE INDEX idx_conversations_user_id ON conversations(user_id);
 CREATE INDEX idx_conversations_created_at ON conversations(created_at);
 ```
 
-### 5. Chuẩn Bị Tài Liệu
-
-- Đặt file `data.docx` vào thư mục gốc
-- Đảm bảo cấu trúc như sau:
-
-```
-Chương 1: VNeID
-1.1. Giới thiệu VNeID
-1.2. Cách đăng ký tài khoản
-[Nội dung chi tiết...]
-
-Chương 2: Cổng Dịch Vụ Công Quốc Gia  
-2.1. Giới thiệu tổng quan
-2.2. Hướng dẫn đăng ký
-[Nội dung chi tiết...]
-```
-
 ## 🚀 Khởi Động
 
-### Development Mode
+### Chế độ Development
 
 ```bash
 npm run dev
 ```
 
-### Production Mode
+### Chế độ Production
 
 ```bash
 npm start
 ```
 
-### Test RAG System
-
-```bash
-npm test
-# hoặc
-node test-rag.js
-```
-
 ## 📊 API Endpoints
 
-### Core Endpoints
+| Method | Endpoint             | Mô Tả                               | 
+|--------|----------------------|-------------------------------------| 
+| `GET`  | `/health`            | Kiểm tra trạng thái của server      | 
+| `GET`  | `/webhook`           | Dùng cho Facebook webhook verification | 
+| `POST` | `/webhook`           | Xử lý tin nhắn từ Facebook Messenger | 
+| `GET`  | `/test`              | Endpoint test chung của server      | 
+| `POST` | `/test-webhook`      | Test nhận dữ liệu webhook thủ công  | 
+| `POST` | `/test-message`      | Test xử lý một tin nhắn giả lập     | 
+| `POST` | `/send-test-message` | Test gửi tin nhắn qua Send API      | 
 
-| Method | Endpoint | Mô Tả |
-|--------|----------|-------|
-| `GET` | `/health` | Kiểm tra trạng thái hệ thống |
-| `GET` | `/webhook` | Facebook webhook verification |
-| `POST` | `/webhook` | Xử lý tin nhắn từ Facebook |
+## 🔧 Cách Sử Dụng
 
-### RAG System Endpoints
+### 1. Tích hợp Facebook
 
-| Method | Endpoint | Mô Tả |
-|--------|----------|-------|
-| `POST` | `/test-rag` | Test tìm kiếm RAG |
-| `GET` | `/rag/chapters` | Danh sách chương |
-| `GET` | `/rag/stats` | Thống kê RAG system |
-| `POST` | `/rag/search-detailed` | Tìm kiếm chi tiết |
-| `POST` | `/rag/preview-context` | Xem preview context |
-| `POST` | `/rag/reload` | Reload tài liệu |
+1.  Truy cập [Facebook Developers](https://developers.facebook.com/) và tạo một App.
+2.  Thiết lập Messenger Platform, lấy `PAGE_ACCESS_TOKEN` cho Fanpage của bạn.
+3.  Cấu hình Webhook:
+    *   **Webhook URL**: `https://your-domain.com/webhook` (thay `your-domain.com` bằng URL server của bạn).
+    *   **Verify Token**: Điền giá trị bạn đã đặt trong file `.env`.
+    *   **Subscribe to events**: Chọn `messages` và `messaging_postbacks`.
 
-### Testing Endpoints
+### 2. Test Gửi Tin Nhắn
 
-| Method | Endpoint | Mô Tả |
-|--------|----------|-------|
-| `POST` | `/test-message` | Test xử lý tin nhắn |
-| `POST` | `/send-test-message` | Test gửi tin nhắn |
-
-## 🔧 Cách Sử Dụng RAG System
-
-### 1. Test Tìm Kiếm
-
-```bash
-curl -X POST http://localhost:3000/test-rag \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query": "cách đăng ký VNeID",
-    "topK": 5
-  }'
-```
-
-### 2. Xem Thống Kê
-
-```bash
-curl http://localhost:3000/rag/stats
-```
-
-### 3. Test Toàn Bộ Flow
+Bạn có thể dùng endpoint `/test-message` để kiểm tra luồng xử lý tin nhắn mà không cần gửi từ Facebook.
 
 ```bash
 curl -X POST http://localhost:3000/test-message \
-  -H "Content-Type: application/json" \  
-  -d '{
+  -H "Content-Type: application/json" \
+  -d 
+'{ 
     "psid": "test_user_123",
-    "message": "hướng dẫn sử dụng cổng dịch vụ công"
+    "message": "Xin chào, bạn có thể giúp gì cho tôi?"
   }'
-```
-
-## 📚 Cấu Trúc RAG System
-
-### Document Chunking
-
-```
-data.docx
-├── Chương 1: VNeID
-│   ├── 1.1. Giới thiệu → Chunk 1
-│   ├── 1.2. Đăng ký → Chunk 2  
-│   └── [Content] → Chunk 3
-├── Chương 2: Cổng DV Công
-│   ├── 2.1. Tổng quan → Chunk 4
-│   └── [Content] → Chunk 5
-└── ...
-```
-
-### Search Algorithm
-
-```javascript
-// Scoring system
-Chapter title match: +3 points
-Section title match: +2 points
-Content match: +1 point
-
-// App-specific bonus
-VNeID match: +5 points
-Cổng dịch vụ match: +5 points
-Sổ tay đảng match: +5 points
-
-// Penalties
-Short content (<50 chars): ×0.5
-```
-
-### Context Integration
-
-```
-User: "Cách đăng ký VNeID?"
-
-RAG Search → Top 3 chunks
-↓
-Context Generation:
-"RELEVANT CONTEXT FROM DOCUMENTATION:
-CONTEXT 1: [VNeID Chapter content]
-CONTEXT 2: [Registration steps]
----
-USER QUESTION: Cách đăng ký VNeID?"
-
-AI Response → Accurate answer based on docs
-```
-
-## 🎯 Facebook Integration
-
-### 1. Tạo Facebook App
-
-1. Truy cập [Facebook Developers](https://developers.facebook.com/)
-2. Tạo app mới → Messenger Platform
-3. Lấy Page Access Token
-4. Thiết lập Webhook URL
-
-### 2. Cấu Hình Webhook
-
-```
-Webhook URL: https://your-domain.com/webhook
-Verify Token: your_custom_verify_token
-Events: messages, messaging_postbacks
-```
-
-### 3. Test Integration
-
-```bash
-# Kiểm tra webhook
-curl "https://your-domain.com/webhook?hub.mode=subscribe&hub.challenge=test&hub.verify_token=your_verify_token"
-
-# Kết quả mong đợi: "test"
 ```
 
 ## 📈 Monitoring và Debugging
 
 ### Health Check
 
+Truy cập endpoint `/health` để kiểm tra "sức khỏe" của ứng dụng.
+
 ```bash
 curl http://localhost:3000/health
 ```
 
-Response:
+Phản hồi mẫu:
 ```json
 {
   "status": "OK",
   "timestamp": "2024-01-01T00:00:00.000Z",
   "activeRequests": 0,
-  "ragSystem": {
-    "initialized": true,
-    "totalChunks": 150,
-    "availableChapters": 5
+  "uptime": 123.45,
+  "memory": {
+    "rss": 51453952,
+    "heapTotal": 34340864,
+    "heapUsed": 27057352,
+    "external": 16777216,
+    "arrayBuffers": 10301
   }
 }
-```
-
-### Logs Monitoring
-
-```bash
-# Xem logs realtime
-tail -f logs/app.log
-
-# Lọc RAG processing
-grep "RAG" logs/app.log
-
-# Lọc errors
-grep "ERROR" logs/app.log
-```
-
-### Performance Metrics
-
-- **Document Loading**: ~500ms
-- **Search Time**: ~50ms per query  
-- **End-to-End Response**: <3 seconds
-- **Memory Usage**: ~200MB for 1000 chunks
-
-## ⚠️ Troubleshooting
-
-### Lỗi Thường Gặp
-
-#### 1. File data.docx không tìm thấy
-
-```
-Error: ENOENT: no such file or directory
-```
-
-**Giải pháp:**
-```bash
-# Kiểm tra file tồn tại
-ls -la data.docx
-
-# Đảm bảo đúng tên và vị trí
-mv your-document.docx data.docx
-```
-
-#### 2. Database connection failed
-
-```
-Error: connect ECONNREFUSED
-```
-
-**Giải pháp:**
-```bash
-# Kiểm tra PostgreSQL running
-pg_isready -h localhost -p 5432
-
-# Test connection
-psql -h $DB_HOST -U $DB_USER -d $DB_NAME
-```
-
-#### 3. Gemini API timeout
-
-```
-Error: Gemini API timeout
-```
-
-**Giải pháp:**
-- Kiểm tra API key
-- Giảm topK chunks (5→3)
-- Tăng timeout (30s→60s)
-
-#### 4. Facebook webhook verification failed
-
-```
-Error: Token mismatch
-```
-
-**Giải pháp:**
-- Kiểm tra VERIFY_TOKEN trong .env
-- Đảm bảo URL webhook chính xác
-- Kiểm tra HTTPS cho production
-
-### Debug Commands
-
-```bash
-# Test RAG system
-node test-rag.js basic
-
-# Performance test  
-node test-rag.js performance
-
-# All tests
-node test-rag.js all
-
-# Reload document
-curl -X POST http://localhost:3000/rag/reload
 ```
 
 ## 🚧 Deployment
@@ -371,16 +161,10 @@ curl -X POST http://localhost:3000/rag/reload
 # Build command
 npm install
 
-# Start command  
+# Start command
 npm start
-
-# Environment variables
-PAGE_ACCESS_TOKEN=***
-VERIFY_TOKEN=***
-GEMINI_API_KEY=***
-DB_HOST=***
-# ...
 ```
+Sau đó, vào mục **Environment** và cài đặt các biến môi trường như trong file `.env`.
 
 ### Docker
 
@@ -397,58 +181,20 @@ EXPOSE 3000
 CMD ["npm", "start"]
 ```
 
-### Health Checks
-
-```bash
-# Docker health check
-HEALTHCHECK --interval=30s --timeout=10s \
-  CMD curl -f http://localhost:3000/health || exit 1
-```
-
-## 📝 Best Practices
-
-### 1. Document Structure
-
-- Sử dụng heading nhất quán
-- Tránh nội dung quá dài trong 1 section
-- Đảm bảo keyword phong phú
-
-### 2. Performance Optimization
-
-- Giới hạn topK = 3-5 chunks
-- Cache search results
-- Optimize chunk size (500-1500 chars)
-
-### 3. Error Handling
-
-- Graceful degradation khi RAG fails
-- Fallback to general knowledge
-- User-friendly error messages
-
-### 4. Security
-
-- Validate all inputs
-- Rate limiting
-- Secure environment variables
-
 ## 🤝 Contributing
 
-1. Fork repository
-2. Tạo feature branch
-3. Commit changes
-4. Push to branch  
-5. Create Pull Request
+1.  Fork repository
+2.  Tạo feature branch
+3.  Commit changes
+4.  Push to branch
+5.  Create Pull Request
 
 ## 📄 License
 
-MIT License - see [LICENSE](LICENSE) file.
+MIT License.
 
 ## 🙋‍♂️ Support
 
 - 📧 Email: anhtuan15082001@gmail.com
 - 💬 Zalo: 0778649573 - Mr. Tuan
-- 🐛 Issues: [GitHub Issues](https://github.com/your-repo/issues)
-
----
-
-**Made with ❤️ for Vietnamese Public Service**
+- 🐛 Issues: [GitHub Issues](https://github.com/anhtuan159801/facebook-chatbot/issues)
